@@ -1,0 +1,61 @@
+{
+  "name": "notion-edge-flags",
+  "version": "0.0.1",
+  "description": "Feature flags synced from Notion to Vercel Edge Config with a tiny runtime client.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./next/*": "./dist/next/*.js"
+  },
+  "bin": {
+    "notion-edge-flags": "dist/cli/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build",
+    "example:runtime": "bun run examples/runtime-read/index.ts",
+    "example:sync-once": "bun run examples/sync-once/index.ts",
+    "test": "bun test"
+  },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.1"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "@vercel/edge-config": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.0.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "tsup": {
+    "entry": [
+      "src/index.ts",
+      "src/next/app-router.ts",
+      "src/next/middleware.ts",
+      "src/cli/main.ts"
+    ],
+    "dts": true,
+    "format": [
+      "esm"
+    ],
+    "sourcemap": true,
+    "clean": true,
+    "minify": false,
+    "target": "es2022"
+  }
+}

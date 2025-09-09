@@ -1,0 +1,23 @@
+{
+  "name": "nextjs-live",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3030",
+    "build": "next build",
+    "start": "next start -p 3030",
+    "seed:notion": "bun run scripts/seed-notion.ts"
+  },
+  "dependencies": {
+    "next": "15.2.2",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "notion-edge-flags": "file:../../"
+  },
+  "devDependencies": {
+    "typescript": "5.5.4",
+    "@types/react": "19.1.12",
+    "@types/node": "24.3.1"
+  }
+}
+
