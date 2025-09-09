@@ -94,9 +94,10 @@ cd examples/nextjs-live && bun run dev
 
 ### 6. Sync Setup
 
-**Option A: Vercel Cron (≤1 min latency)**
+**Option A: Vercel Scheduled Functions (≤1 min latency)**
+
+Create `app/api/flags/sync/route.ts`:
 ```ts
-// app/api/flags/sync/route.ts
 import { NextResponse } from 'next/server';
 import { createSyncer, fetchChangedRows } from 'notion-edge-flags';
 
@@ -119,7 +120,19 @@ export async function GET(req: Request) {
 }
 ```
 
-Add Vercel Cron: `* * * * *` (every minute) → `/api/flags/sync`
+Add to `vercel.json`:
+```json
+{
+  "crons": [
+    {
+      "path": "/api/flags/sync",
+      "schedule": "* * * * *"
+    }
+  ]
+}
+```
+
+Or use Vercel Dashboard → Functions → Cron Jobs → Add Job
 
 **Option B: Always-on Worker (~30s latency)**
 ```bash
