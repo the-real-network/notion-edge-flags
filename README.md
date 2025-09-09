@@ -1,4 +1,6 @@
-Notion <> Edge feature toogle provider
+# notion-edge-flags
+
+[![npm version](https://badge.fury.io/js/notion-edge-flags.svg)](https://www.npmjs.com/package/notion-edge-flags)
 
 Feature flags synced from Notion to Vercel Edge Config with ultra-fast runtime reads.
 
@@ -318,6 +320,29 @@ bun test
 bun run example:runtime
 bun run example:sync-once
 ```
+
+
+## Why Edge Config?
+
+**vs. Direct Notion reads:**
+- **Latency**: 5-50ms (Edge Config) vs 200-500ms (Notion API)
+- **Rate limits**: High/unlimited vs 3 requests/second
+- **Reliability**: 99.9%+ uptime vs Notion API dependency
+- **Geography**: Global edge nodes vs single Notion region
+- **Scale**: Handles massive load vs limited concurrent requests
+
+**vs. Database/Redis:**
+- **No infrastructure**: Managed by Vercel vs self-hosted
+- **Global distribution**: Built-in vs manual replication
+- **Edge runtime**: Native integration vs network calls
+- **Cost**: Included with Vercel vs separate service
+
+**vs. Static generation:**
+- **Dynamic updates**: No rebuilds vs redeploy required
+- **Real-time**: Instant changes vs build pipeline
+- **Flexibility**: Runtime evaluation vs compile-time only
+
+Fast enough for real-time decisions, reliable enough for production
 
 ## Deployment
 
