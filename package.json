@@ -1,6 +1,6 @@
 {
   "name": "notion-edge-flags",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Feature flags synced from Notion to Vercel Edge Config with a tiny runtime client.",
   "license": "MIT",
   "type": "module",
