@@ -47,7 +47,10 @@ export async function cmdInit(): Promise<void> {
         value_string: { rich_text: {} },
         value_json: { rich_text: {} },
         value_percent: { number: {} },
-        value_ruleset: { rich_text: {} }
+        value_ruleset: { rich_text: {} },
+        description: { rich_text: {} },
+        created_by: { created_by: {} },
+        last_edited_time: { last_edited_time: {} }
       }
     })
   });
@@ -66,45 +69,57 @@ export async function cmdInit(): Promise<void> {
   const envDev = { multi_select: [{ name: "development" }] };
 
   await createRow({
-    key: { title: [{ text: { content: "checkoutRedesign" } }] },
+    key: { title: [{ text: { content: "newCheckoutFlow" } }] },
     type: { select: { name: "boolean" } },
     env: envDev,
-    value_boolean: { checkbox: true }
+    value_boolean: { checkbox: true },
+    description: { rich_text: [{ text: { content: "Enable redesigned checkout experience" } }] }
   });
 
   await createRow({
-    key: { title: [{ text: { content: "testNumber" } }] },
+    key: { title: [{ text: { content: "maxCartItems" } }] },
     type: { select: { name: "number" } },
     env: envDev,
-    value_number: { number: 42 }
+    value_number: { number: 10 },
+    description: { rich_text: [{ text: { content: "Maximum items allowed in shopping cart" } }] }
   });
 
   await createRow({
-    key: { title: [{ text: { content: "testString" } }] },
+    key: { title: [{ text: { content: "welcomeMessage" } }] },
     type: { select: { name: "string" } },
     env: envDev,
-    value_string: { rich_text: [{ text: { content: "hello" } }] }
+    value_string: { rich_text: [{ text: { content: "Welcome to our store!" } }] },
+    description: { rich_text: [{ text: { content: "Homepage hero message" } }] }
   });
 
   await createRow({
-    key: { title: [{ text: { content: "testJSON" } }] },
+    key: { title: [{ text: { content: "paymentConfig" } }] },
     type: { select: { name: "json" } },
     env: envDev,
-    value_json: { rich_text: [{ text: { content: JSON.stringify({ a: 1, b: "x" }) } }] }
+    value_json: { rich_text: [{ text: { content: JSON.stringify({ provider: "stripe", currency: "USD", methods: ["card", "paypal"] }) } }] },
+    description: { rich_text: [{ text: { content: "Payment system configuration" } }] }
   });
 
   await createRow({
-    key: { title: [{ text: { content: "testPercent" } }] },
+    key: { title: [{ text: { content: "premiumFeatureRollout" } }] },
     type: { select: { name: "percentRollout" } },
     env: envDev,
-    value_percent: { number: 25 }
+    value_percent: { number: 15 },
+    description: { rich_text: [{ text: { content: "Gradual rollout of premium features to 15% of users" } }] }
   });
 
   await createRow({
-    key: { title: [{ text: { content: "testRules" } }] },
+    key: { title: [{ text: { content: "regionBasedPricing" } }] },
     type: { select: { name: "ruleSet" } },
     env: envDev,
-    value_ruleset: { rich_text: [{ text: { content: JSON.stringify({ rules: [{ if: { country: "PL" }, then: true }, { else: false }] }) } }] }
+    value_ruleset: { rich_text: [{ text: { content: JSON.stringify({ 
+      rules: [
+        { if: { country: "US", plan: "enterprise" }, then: true },
+        { if: { country: "EU" }, then: true },
+        { else: false }
+      ] 
+    }) } }] },
+    description: { rich_text: [{ text: { content: "Enable region-specific pricing for US enterprise and EU users" } }] }
   });
 
   process.stdout.write(`\n✅ Created database "${dbName}" with 6 sample flags\n`);
@@ -122,6 +137,7 @@ export async function cmdInit(): Promise<void> {
   process.stdout.write(`🔧 Still needed (get from Vercel):\n`);
   process.stdout.write(`EDGE_CONFIG=https://edge-config.vercel.com/ecfg_xxx?token=xxx\n`);
   process.stdout.write(`VERCEL_API_TOKEN=xxx\n`);
+  process.stdout.write(`VERCEL_TEAM_ID=team_xxx  # Required if not using personal account\n`);
   process.stdout.write(`SYNC_SECRET=any_random_string\n`);
   
   process.stdout.write(`\n💡 Next steps:\n`);

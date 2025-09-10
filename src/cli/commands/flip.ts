@@ -1,7 +1,7 @@
 import { formatNamespacedKey, resolveEnvironment } from "../../utils/env.ts";
-import { patchItems } from "../../sync/edge-config.js";
-import { parseEdgeConfigConnection } from "../../utils/edge-config-parser.js";
-import { loadDotenv, getEnv } from "../utils.ts";
+import { patchItems } from "../../sync/edge-config.ts";
+import { parseEdgeConfigConnection } from "../../utils/edge-config-parser.ts";
+import { loadDotenv, getEnv, getDefaultTeamId } from "../utils.ts";
 
 export async function cmdFlip(argv: string[]): Promise<void> {
   loadDotenv();
@@ -26,8 +26,10 @@ export async function cmdFlip(argv: string[]): Promise<void> {
   }
   const edgeConfigConnection = getEnv("EDGE_CONFIG");
   const apiToken = getEnv("VERCEL_API_TOKEN");
+  const teamId = process.env.VERCEL_TEAM_ID ?? await getDefaultTeamId(apiToken);
+  if (!teamId) throw new Error("VERCEL_TEAM_ID not found");
   const { edgeConfigId } = parseEdgeConfigConnection(edgeConfigConnection);
   const nsKey = formatNamespacedKey("flag", env, key);
-  await patchItems([{ operation: "upsert", key: nsKey, value }], { edgeConfigId, token: apiToken });
+  await patchItems([{ operation: "upsert", key: nsKey, value }], { edgeConfigId, token: apiToken, teamId });
   process.stdout.write(`updated ${nsKey}\n`);
 }

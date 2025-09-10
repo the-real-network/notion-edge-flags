@@ -72,6 +72,7 @@ Share the database with your integration.
 3. Give it a name like "Edge Config Writer"
 4. **Scope**: Select the team that owns your Edge Config
 5. Copy the token to VERCEL_API_TOKEN env
+6. **Copy the team ID**: From the team dropdown URL or settings (format: `team_xxxxx`) → set as VERCEL_TEAM_ID
 
 **Common Issues:**
 - **403 Forbidden**: Token and Edge Config must be in the same team
@@ -86,6 +87,7 @@ NOTION_TOKEN=ntn_xxxxx                    # From notion.so/my-integrations
 NOTION_FLAGS_DB_NAME="Feature Flags"     # Database name to search for
 EDGE_CONFIG=https://edge-config.vercel.com/ecfg_xxxxx?token=xxxxx  # Connection string
 VERCEL_API_TOKEN=vc_xxxxx                # API token with Edge Config write access
+VERCEL_TEAM_ID=team_xxxxx                # Team ID (if not using personal account)
 
 # Optional
 SYNC_SECRET=your_random_secret           # For protecting sync API route
@@ -409,3 +411,4 @@ Fast enough for real-time decisions, reliable enough for production
 - Edge Config and API token must be in the same Vercel team
 - Connection string format: `https://edge-config.vercel.com/ecfg_xxx?token=xxx`
 - Check team access: API token scope must match Edge Config team
+- Set VERCEL_TEAM_ID if not using personal account (prevents default team usage)

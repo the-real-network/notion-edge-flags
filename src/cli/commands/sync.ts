@@ -1,7 +1,7 @@
 import { createSyncer } from "../../sync/syncer.ts";
 import { fetchChangedRows } from "../../sync/notion.ts";
 import { resolveEnvironment } from "../../utils/env.ts";
-import { loadDotenv, getEnv } from "../utils.ts";
+import { loadDotenv, getEnv, getDefaultTeamId } from "../utils.ts";
 
 export async function cmdSync(argv: string[]): Promise<void> {
   loadDotenv();
@@ -10,7 +10,8 @@ export async function cmdSync(argv: string[]): Promise<void> {
   const env = (envArgIndex >= 0 ? argv[envArgIndex + 1] : undefined) ?? resolveEnvironment(null);
   const edgeConfigConnection = getEnv("EDGE_CONFIG");
   const apiToken = getEnv("VERCEL_API_TOKEN");
-  const teamId = process.env.VERCEL_TEAM_ID;
+  const teamId = process.env.VERCEL_TEAM_ID ?? await getDefaultTeamId(apiToken);
+  if (!teamId) throw new Error("VERCEL_TEAM_ID not found");
   const notion = { token: getEnv("NOTION_TOKEN"), databaseId: process.env.NOTION_FLAGS_DB ?? undefined, databaseName: process.env.NOTION_FLAGS_DB_NAME ?? undefined };
   const syncer = createSyncer({
     notion,

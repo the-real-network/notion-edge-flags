@@ -7,6 +7,19 @@ export function getEnv(name: string, required = true): string {
   return v ?? "";
 }
 
+export async function getDefaultTeamId(apiToken: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://api.vercel.com/v2/user", {
+      headers: { Authorization: `Bearer ${apiToken}` }
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { user?: { defaultTeamId?: string } };
+    return data.user?.defaultTeamId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function loadDotenv(): void {
   const cwd = process.cwd();
   const candidates = [
