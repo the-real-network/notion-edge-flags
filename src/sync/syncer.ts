@@ -50,21 +50,17 @@ export function createSyncer(options: SyncerOptions) {
     const keys = Object.keys(target);
     if (keys.length === 0) return 0;
     const current = await getItems(keys, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
-    console.log(`Diff check: target keys=${Object.keys(target).join(',')}`);
-    console.log(`Current from Edge Config:`, current);
     const items: Array<{ operation: "upsert"; key: string; value: unknown }> = [];
     for (const k of keys) {
       const desired = target[k];
       const existing = current[k];
       const equal = JSON.stringify(desired) === JSON.stringify(existing);
-      console.log(`Key ${k}: desired=${JSON.stringify(desired)} existing=${JSON.stringify(existing)} equal=${equal}`);
       if (!equal) {
         if (drift === "prefer-edge-config") continue;
         if (drift === "report-only") continue;
         items.push({ operation: "upsert", key: k, value: desired });
       }
     }
-    console.log(`Will patch ${items.length} items:`, items.map(i => `${i.key}=${JSON.stringify(i.value)}`));
     if (items.length > 0) await patchItems(items, edgeConfigOpts);
     return items.length;
   }
@@ -72,11 +68,8 @@ export function createSyncer(options: SyncerOptions) {
   async function once(fetcher: (since: string | null) => Promise<NotionFlagRow[]>) {
     const t0 = Date.now();
     const since = await readCheckpoint(namespace, env, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
-    console.log(`Sync checkpoint: since=${since}`);
     const rows = await fetcher(since);
-    console.log(`Fetched ${rows.length} rows from Notion since ${since || 'beginning'}`);
     const mapped = mapNotionToEdge(rows);
-    console.log(`Mapped to Edge Config:`, mapped);
     const updated = await diffAndPatch(mapped);
     const keys = Object.keys(mapped);
     const after = await getItems(keys, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
@@ -84,7 +77,6 @@ export function createSyncer(options: SyncerOptions) {
     const now = new Date().toISOString();
     await writeCheckpoint(namespace, env, now, edgeConfigOpts);
     await writeSummary(namespace, env, { updated, at: now, checksum }, edgeConfigOpts);
-    log(`synced ${updated} flags for ${env}`);
   }
 
   async function run(fetcher: (since: string | null) => Promise<NotionFlagRow[]>) {
