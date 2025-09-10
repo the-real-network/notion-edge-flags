@@ -7,8 +7,8 @@ Feature flags synced from Notion to Vercel Edge Config with ultra-fast runtime r
 ## Install
 
 ```bash
-# using bun:
 bun add notion-edge-flags
+npm i notion-edge-flags
 ```
 
 ## Overview
@@ -29,17 +29,16 @@ bun add notion-edge-flags
 
 ### 2. Create Notion Database
 
-**Option A: Use seed script (recommended)**
+**Option A: Interactive CLI (recommended)**
 ```bash
-# Get parent page ID: open any Notion page, copy URL
-# https://www.notion.so/workspace/Page-Name-abc123def456...
-# The 32-char hex at the end is the page ID
-
-cd examples/nextjs-live
-cp .env.example .env.local
-# Fill NOTION_TOKEN and NOTION_PARENT_PAGE_ID in .env.local
-NOTION_PARENT_PAGE_ID=your_page_id bun run scripts/seed-notion.ts
+# Interactive setup - prompts for credentials and creates database
+npx notion-edge-flags init
 ```
+This will:
+- Guide you through getting Notion credentials
+- Create the database with proper schema
+- Generate sample flags for all types  
+- Output copy-paste env block for your .env.local
 
 **Option B: Manual setup**
 Create a database with these columns:
@@ -72,7 +71,7 @@ Share the database with your integration.
 2. **Important**: Ensure the token has access to the **same team** where you created the Edge Config
 3. Give it a name like "Edge Config Writer"
 4. **Scope**: Select the team that owns your Edge Config
-5. Copy the token (starts with `vc_` or similar)
+5. Copy the token to VERCEL_API_TOKEN env
 
 **Common Issues:**
 - **403 Forbidden**: Token and Edge Config must be in the same team
@@ -101,7 +100,7 @@ npx notion-edge-flags validate --env development
 # Sync once
 npx notion-edge-flags sync --env development --once
 
-# Start example app
+# Or start example app
 cd examples/nextjs-live && bun run dev
 # Visit http://localhost:3030
 ```
@@ -211,6 +210,9 @@ const enabled = evaluate.ruleSet({
 ## CLI Commands
 
 ```bash
+# Create Notion database with sample flags
+npx notion-edge-flags init
+
 # Validate Notion schema
 npx notion-edge-flags validate --env production
 

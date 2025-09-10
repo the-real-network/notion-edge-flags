@@ -4,42 +4,31 @@ Complete demonstration of notion-edge-flags with real Notion and Vercel Edge Con
 
 ## Setup
 
-### 1. Get Credentials
-
-**Notion Integration:**
-1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
-2. Click "New integration" → name it "Feature Flags"
-3. Copy the **Internal Integration Token** → `NOTION_TOKEN`
-
-**Parent Page ID:**
-1. Open any Notion page in your workspace
-2. Copy the URL: `https://www.notion.so/workspace/Page-Name-abc123def456...`
-3. The 32-character hex at the end is your `NOTION_PARENT_PAGE_ID`
-
-**Vercel Edge Config:**
-1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-2. **Important**: Select the correct team (note the team name)
-3. Go to any project → **Storage** → **Edge Config** → **Create Config**
-4. Name it "feature-flags"
-5. Copy the **Connection String** → `EDGE_CONFIG`
-
-**Vercel API Token:**
-1. Go to **Account Settings** → **Tokens** → **Create Token**
-2. **Critical**: Scope it to the **same team** where you created Edge Config
-3. Name it "Edge Config Writer"
-4. Copy the token → `VERCEL_API_TOKEN`
-
-### 2. Environment Setup
+### 1. Interactive Setup
 ```bash
-cp .env.example .env.local
-# Fill all values from above steps
+# Interactive CLI guides you through everything
+npx notion-edge-flags init
 ```
 
-### 3. Create Test Database
-```bash
-bun run scripts/seed-notion.ts
-# This creates a database with sample flags under your parent page
-```
+This will:
+1. **Guide you to get Notion credentials** (with exact URLs)
+2. **Prompt for tokens/IDs** with validation
+3. **Create the database** with proper schema + sample flags
+4. **Output copy-paste env block** for your .env.local
+5. **Show next steps** to complete setup
+
+### 2. Get Vercel Credentials
+After `init`, you still need:
+
+**Edge Config:**
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard) → select your team
+2. Project → **Storage** → **Edge Config** → **Create Config**  
+3. Copy the **Connection String**
+
+**API Token:**
+1. **Account Settings** → **Tokens** → **Create Token**
+2. **Important**: Scope to the same team as your Edge Config
+3. Copy the token
 
 ### 4. Install and Sync
 ```bash
