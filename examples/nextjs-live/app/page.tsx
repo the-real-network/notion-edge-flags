@@ -3,67 +3,86 @@ import { createFlagsClient, evaluate } from 'notion-edge-flags';
 
 export default async function Page() {
   const client = createFlagsClient();
-  const flags = await client.getMany([
-    'newCheckoutFlow', 'maxCartItems', 'welcomeMessage', 
-    'paymentConfig', 'premiumFeatureRollout', 'regionBasedPricing'
-  ]);
-
-  const percent = Number(flags.premiumFeatureRollout) || 0;
-  const inCohort = evaluate.rolloutPercent({
+  
+  const checkoutEnabled = await client.isEnabled('newCheckoutFlow');
+  const checkoutConfig = await client.getValue('newCheckoutFlow');
+  
+  const maxItems = await client.getValue<number>('maxCartItems');
+  const welcomeMsg = await client.getValue<string>('welcomeMessage');
+  const paymentConfig = await client.getValue('paymentConfig');
+  
+  const premiumFlag = await client.getFlag('premiumFeatureRollout');
+  const premiumEnabled = evaluate.evaluateFlag({
     key: 'premiumFeatureRollout',
-    percent,
+    flag: premiumFlag,
     unitId: 'user-12345'
   });
 
-  const ruleResult = evaluate.ruleSet({
+  const pricingFlag = await client.getFlag('regionBasedPricing');
+  const pricingEnabled = evaluate.evaluateFlag({
     key: 'regionBasedPricing',
-    value: flags.regionBasedPricing,
+    flag: pricingFlag,
     context: { country: 'US', plan: 'enterprise' }
   });
 
   return (
     <main style={{ padding: 24, fontFamily: 'ui-sans-serif,system-ui', maxWidth: 800, lineHeight: 1.6 }}>
-      <h1>🚩 notion-edge-flags live example</h1>
+      <h1>🚩 notion-edge-flags live example (New API)</h1>
 
       <section style={{ marginBottom: 32 }}>
-        <h2>All Flag Values</h2>
+        <h2>Feature Flags Status</h2>
         <div style={{ display: 'grid', gap: 8 }}>
-          <div><strong>Checkout Flow:</strong> {JSON.stringify(flags.newCheckoutFlow)}</div>
-          <div><strong>Max Cart Items:</strong> {JSON.stringify(flags.maxCartItems)}</div>
-          <div><strong>Welcome Message:</strong> {JSON.stringify(flags.welcomeMessage)}</div>
-          <div><strong>Payment Config:</strong> {JSON.stringify(flags.paymentConfig)}</div>
-          <div><strong>Premium Rollout:</strong> {JSON.stringify(flags.premiumFeatureRollout)}%</div>
-          <div><strong>Regional Pricing:</strong> {JSON.stringify(flags.regionBasedPricing)}</div>
+          <div><strong>New Checkout Flow:</strong> {checkoutEnabled ? '✅ ENABLED' : '❌ DISABLED'} 
+            {checkoutConfig && <span> - Config: {String(JSON.stringify(checkoutConfig))}</span>}</div>
+          <div><strong>Max Cart Items:</strong> {maxItems ? `${maxItems} items` : 'Default'}</div>
+          <div><strong>Welcome Message:</strong> {welcomeMsg || 'Default welcome'}</div>
+          <div><strong>Payment Config:</strong> {JSON.stringify(paymentConfig)}</div>
+          <div><strong>Premium Features:</strong> {premiumEnabled ? '✅ ENABLED' : '❌ DISABLED'} 
+            {premiumFlag && <span> ({premiumFlag.type}: {JSON.stringify(premiumFlag.value)})</span>}</div>
+          <div><strong>Regional Pricing:</strong> {pricingEnabled ? '✅ ENABLED' : '❌ DISABLED'}</div>
         </div>
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2>Rollout Evaluation</h2>
+        <h2>Advanced Evaluation</h2>
         <div style={{ background: '#f0f8ff', padding: 16, borderRadius: 8 }}>
-          <div>Premium Features Rollout: {percent}%</div>
+          <h3>Premium Features Rollout</h3>
+          <div>Flag Enabled: {premiumFlag?.enabled ? 'Yes' : 'No'}</div>
+          <div>Type: {premiumFlag?.type || 'N/A'}</div>
+          <div>Value: {JSON.stringify(premiumFlag?.value)}</div>
           <div>User ID: user-12345</div>
-          <div>In Cohort: <strong>{inCohort ? 'YES' : 'NO'}</strong></div>
+          <div>Final Result: <strong>{premiumEnabled ? 'IN COHORT' : 'NOT IN COHORT'}</strong></div>
         </div>
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2>Rule Evaluation</h2>
+        <h2>Rule-based Evaluation</h2>
         <div style={{ background: '#f5fff5', padding: 16, borderRadius: 8 }}>
+          <h3>Regional Pricing</h3>
+          <div>Flag Enabled: {pricingFlag?.enabled ? 'Yes' : 'No'}</div>
+          <div>Type: {pricingFlag?.type || 'N/A'}</div>
           <div>Context: {JSON.stringify({ country: 'US', plan: 'enterprise' })}</div>
-          <div>Regional Pricing: <strong>{ruleResult ? 'ENABLED' : 'DISABLED'}</strong></div>
+          <div>Final Result: <strong>{pricingEnabled ? 'PRICING RULES APPLY' : 'DEFAULT PRICING'}</strong></div>
         </div>
       </section>
 
-      <section>
-        <h2>Raw Data</h2>
-        <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, fontSize: 12, overflow: 'auto' }}>
-          {JSON.stringify(flags, null, 2)}
-        </pre>
+      <section style={{ marginBottom: 32 }}>
+        <h2>New API Showcase</h2>
+        <div style={{ background: '#fff5f5', padding: 16, borderRadius: 8 }}>
+          <h3>Key Benefits:</h3>
+          <ul>
+            <li><strong>Universal Toggle:</strong> Every flag has an enabled/disabled state</li>
+            <li><strong>Flexible Values:</strong> Optional additional configuration per flag</li>
+            <li><strong>Simple API:</strong> <code>isEnabled()</code>, <code>getValue()</code>, <code>getFlag()</code></li>
+            <li><strong>Smart Evaluation:</strong> Built-in support for percentages and rules</li>
+            <li><strong>Emergency Control:</strong> Disable any feature instantly</li>
+          </ul>
+        </div>
       </section>
 
       <footer style={{ marginTop: 32, padding: 16, background: '#fffbf0', borderRadius: 8 }}>
         <p><strong>Test sync:</strong> Edit flags in Notion → run <code>npx notion-edge-flags sync --env development --once</code> → refresh this page</p>
-        <p><strong>Emergency flip:</strong> <code>npx notion-edge-flags flip --env development --key newCheckoutFlow --value false</code></p>
+        <p><strong>Emergency flip:</strong> Toggle the 'enabled' checkbox in Notion to instantly disable any feature</p>
       </footer>
     </main>
   );

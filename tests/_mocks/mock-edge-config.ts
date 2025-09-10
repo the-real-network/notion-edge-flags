@@ -1,6 +1,6 @@
 export function installEdgeConfigFetchMock(store: Map<string, unknown>, id = "local") {
   const original = globalThis.fetch;
-  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  globalThis.fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = typeof input === "string" ? input : input.toString();
     const u = new URL(url);
     if ((u.hostname === "api.vercel.com" && u.pathname.startsWith(`/v1/edge-config/${id}/items`)) ||

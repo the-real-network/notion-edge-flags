@@ -1,7 +1,8 @@
 export type NotionFlagRow = {
   key: string;
-  type: "boolean" | "number" | "string" | "json" | "percentRollout" | "ruleSet";
-  value: unknown;
+  enabled: boolean;
+  value?: unknown;
+  type?: "string" | "number" | "json" | "percent" | "rules";
   envs: string[];
   lastEditedAt: string;
   pageUrl?: string;
@@ -78,13 +79,18 @@ function parseRow(page: NotionPage): NotionFlagRow {
   const pageUrl = `https://www.notion.so/${page.id.replace(/-/g, "")}`;
   const key = readTitle(props.key) || readTitle(props.Key);
   if (!key) throw new NotionSchemaError("Missing required property 'key' (Title)", pageUrl, "Add a Title column named 'key'.");
-  const typeName = readSelect(props.type) || readSelect(props.Type) || inferTypeFromValues(props);
-  if (!typeName) throw new NotionSchemaError("Missing 'type' (Select)", pageUrl, "Add a Select column 'type' with one of: boolean | number | string | json | percentRollout | ruleSet; or provide a typed value column like 'value_boolean'.");
+  
+  const enabled = readCheckbox(props.enabled) ?? readCheckbox(props.Enabled);
+  if (enabled === null) throw new NotionSchemaError("Missing required property 'enabled' (Checkbox)", pageUrl, "Add a Checkbox column named 'enabled'.");
+  
   const envs = readMultiSelect(props.env) || readMultiSelect(props.Env) || [];
   if (!Array.isArray(envs) || envs.length === 0) throw new NotionSchemaError("Missing 'env' (Multi-select)", pageUrl, "Add an 'env' multi-select with values like development, preview, production.");
+  
   const lastEditedAt = page.last_edited_time;
-  const value = readValueByType(typeName, props, pageUrl);
-  return { key, type: typeName, value, envs, lastEditedAt, pageUrl } as NotionFlagRow;
+  const typeName = readSelect(props.type) || readSelect(props.Type) || undefined;
+  const value = typeName ? readValueByType(typeName, props, pageUrl) : readGenericValue(props);
+  
+  return { key, enabled, value, type: typeName, envs, lastEditedAt, pageUrl } as NotionFlagRow;
 }
 
 function readTitle(prop: any): string | null {
@@ -93,10 +99,15 @@ function readTitle(prop: any): string | null {
   return t?.plain_text ?? null;
 }
 
+function readCheckbox(prop: any): boolean | null {
+  if (!prop || prop.type !== "checkbox") return null;
+  return Boolean(prop.checkbox);
+}
+
 function readSelect(prop: any): NotionFlagRow["type"] | null {
   if (!prop || prop.type !== "select" || typeof prop.select?.name !== "string") return null;
   const n = String(prop.select.name);
-  if (n === "boolean" || n === "number" || n === "string" || n === "json" || n === "percentRollout" || n === "ruleSet") return n as any;
+  if (n === "string" || n === "number" || n === "json" || n === "percent" || n === "rules") return n as any;
   return null;
 }
 
@@ -114,12 +125,6 @@ function readRichTextFirst(prop: any): string | null {
 }
 
 function readValueByType(typeName: NotionFlagRow["type"], props: any, pageUrl: string): unknown {
-  if (typeName === "boolean") {
-    if (props.value?.type === "checkbox") return Boolean(props.value.checkbox);
-    if (props.Value?.type === "checkbox") return Boolean(props.Value.checkbox);
-    if (props.value_boolean?.type === "checkbox") return Boolean(props.value_boolean.checkbox);
-    throw new NotionSchemaError("Boolean value missing", pageUrl, "Ensure a Checkbox in 'value' or add 'value_boolean' Checkbox.");
-  }
   if (typeName === "number") {
     const n = props.value?.number ?? props.Value?.number ?? props.value_number?.number;
     if (typeof n === "number") return n;
@@ -132,39 +137,50 @@ function readValueByType(typeName: NotionFlagRow["type"], props: any, pageUrl: s
   }
   if (typeName === "json") {
     const s = readRichTextFirst(props.value ?? props.Value ?? props.value_json);
-    if (typeof s !== "string") throw new NotionSchemaError("JSON value missing", pageUrl, "Put JSON in 'value' rich text or use 'value_json'.");
+    if (typeof s !== "string" || s.trim() === "") {
+      throw new NotionSchemaError("JSON value missing", pageUrl, "Put JSON in 'value' rich text field, or use 'value_json' rich text field.");
+    }
     try {
       return JSON.parse(s);
     } catch (e) {
-      throw new NotionSchemaError("JSON parse failed", pageUrl, "Ensure valid JSON (first block)." );
+      throw new NotionSchemaError("JSON parse failed", pageUrl, "Ensure valid JSON in the rich text field. Current content: " + s.substring(0, 100));
     }
   }
-  if (typeName === "percentRollout") {
+  if (typeName === "percent") {
     const n = props.value?.number ?? props.Value?.number ?? props.value_percent?.number;
     const v = typeof n === "number" ? Math.max(0, Math.min(100, Math.floor(n))) : 0;
     return v;
   }
-  if (typeName === "ruleSet") {
+  if (typeName === "rules") {
     const s = readRichTextFirst(props.value ?? props.Value ?? props.value_ruleset);
-    if (typeof s !== "string") throw new NotionSchemaError("ruleSet value missing", pageUrl, "Provide JSON in 'value' or 'value_ruleSet' matching { rules: [...] }.");
+    if (typeof s !== "string" || s.trim() === "") {
+      throw new NotionSchemaError("rules value missing", pageUrl, "Put rules JSON in 'value' rich text field, or use 'value_ruleset' rich text field.");
+    }
     try {
       const obj = JSON.parse(s);
       return obj;
     } catch (e) {
-      throw new NotionSchemaError("ruleSet parse failed", pageUrl, "Ensure JSON like {\"rules\":[{\"if\":{...},\"then\":true},{\"else\":false}]}.");
+      throw new NotionSchemaError("rules parse failed", pageUrl, "Ensure valid JSON like {\"rules\":[{\"if\":{...},\"then\":true},{\"else\":false}]}. Current content: " + s.substring(0, 100));
     }
   }
-  throw new NotionSchemaError("Unsupported type", pageUrl, "Allowed: boolean | number | string | json | percentRollout | ruleSet.");
+  throw new NotionSchemaError("Unsupported type", pageUrl, "Allowed: string | number | json | percent | rules.");
 }
 
-function inferTypeFromValues(props: any): NotionFlagRow["type"] | null {
-  if (props?.value_boolean?.type === "checkbox") return "boolean";
-  if (props?.value_number?.type === "number" && typeof props.value_number.number === "number") return "number";
-  if (props?.value_string?.type === "rich_text" && Array.isArray(props.value_string.rich_text)) return "string";
-  if (props?.value_json?.type === "rich_text" && Array.isArray(props.value_json.rich_text)) return "json";
-  if (props?.value_percent?.type === "number" && typeof props.value_percent.number === "number") return "percentRollout";
-  if (props?.value_ruleset?.type === "rich_text" && Array.isArray(props.value_ruleset.rich_text)) return "ruleSet";
-  return null;
+function readGenericValue(props: any): unknown {
+  if (props.value?.type === "checkbox") return Boolean(props.value.checkbox);
+  if (props.Value?.type === "checkbox") return Boolean(props.Value.checkbox);
+  if (props.value?.type === "number" && typeof props.value.number === "number") return props.value.number;
+  if (props.Value?.type === "number" && typeof props.Value.number === "number") return props.Value.number;
+  const richText = readRichTextFirst(props.value ?? props.Value);
+  if (richText) {
+    try {
+      return JSON.parse(richText);
+    } catch {
+      return richText;
+    }
+  }
+  return undefined;
 }
+
 
 

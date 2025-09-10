@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 describe("syncer", () => {
-  it("upserts changed keys", async () => {
+  it("upserts changed keys with new structure", async () => {
     const now = new Date().toISOString();
     undoNotion = installNotionFetchMock([
       {
@@ -29,8 +29,9 @@ describe("syncer", () => {
         last_edited_time: now,
         properties: {
           key: { id: "key", type: "title", title: [{ plain_text: "t1" }] },
-          type: { id: "type", type: "select", select: { name: "boolean" } },
-          value: { id: "value", type: "checkbox", checkbox: true },
+          enabled: { id: "enabled", type: "checkbox", checkbox: true },
+          type: { id: "type", type: "select", select: { name: "string" } },
+          value: { id: "value", type: "rich_text", rich_text: [{ plain_text: "test-value" }] },
           env: { id: "env", type: "multi_select", multi_select: [{ name: "production" }] }
         }
       }
@@ -39,7 +40,13 @@ describe("syncer", () => {
     const edgeConfig = { connectionString: "https://edge-config.vercel.com/local?token=test", apiToken: "t" } as any;
     const syncer = createSyncer({ notion, edgeConfig, env: "production", mode: "once" });
     await syncer.run((since) => fetchChangedRows(notion, since));
-    expect(store.get("flag__production__t1")).toBe(true);
+    
+    const flag = store.get("flag__production__t1");
+    expect(flag).toEqual({
+      enabled: true,
+      value: "test-value",
+      type: "string"
+    });
   });
 });
 

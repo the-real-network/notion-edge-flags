@@ -14,7 +14,11 @@ export async function cmdDiff(argv: string[]): Promise<void> {
   const keys: string[] = [];
   for (const r of rows) if (r.envs.includes(env)) {
     const k = `flag__${env}__${r.key}`;
-    desired[k] = r.value;
+    desired[k] = {
+      enabled: r.enabled,
+      value: r.value,
+      type: r.type
+    };
     keys.push(k);
   }
   const current = await getItems(keys, { connectionString: edgeConfigConnection });

@@ -1,5 +1,11 @@
 export type EnvironmentName = "production" | "preview" | "development" | "test" | string;
 
+export type FeatureFlag = {
+  enabled: boolean;
+  value?: unknown;
+  type?: "string" | "number" | "json" | "percent" | "rules";
+};
+
 export type FlagsClientOptions = {
   connection?: EdgeConfigConnection | null;
   env?: EnvironmentName;

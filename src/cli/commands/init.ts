@@ -39,17 +39,17 @@ export async function cmdInit(): Promise<void> {
       title: [{ type: "text", text: { content: dbName } }],
       properties: {
         key: { title: {} },
+        enabled: { checkbox: {} },
         type: { select: { options: [
-          { name: "boolean" }, { name: "number" }, { name: "string" }, 
-          { name: "json" }, { name: "percentRollout" }, { name: "ruleSet" }
+          { name: "string" }, { name: "number" }, { name: "json" }, 
+          { name: "percent" }, { name: "rules" }
         ] } },
-        env: { multi_select: { options: [{ name: "development" }, { name: "preview" }, { name: "production" }] } },
-        value_boolean: { checkbox: {} },
+        value: { rich_text: {} },
         value_number: { number: {} },
-        value_string: { rich_text: {} },
         value_json: { rich_text: {} },
         value_percent: { number: {} },
         value_ruleset: { rich_text: {} },
+        env: { multi_select: { options: [{ name: "development" }, { name: "preview" }, { name: "production" }] } },
         description: { rich_text: {} },
         created_by: { created_by: {} },
         last_edited_time: { last_edited_time: {} }
@@ -72,59 +72,73 @@ export async function cmdInit(): Promise<void> {
 
   await createRow({
     key: { title: [{ text: { content: "newCheckoutFlow" } }] },
-    type: { select: { name: "boolean" } },
+    enabled: { checkbox: true },
+    value: { rich_text: [{ text: { content: "v2" } }] },
     env: envDev,
-    value_boolean: { checkbox: true },
     description: { rich_text: [{ text: { content: "Enable redesigned checkout experience" } }] }
   });
 
   await createRow({
     key: { title: [{ text: { content: "maxCartItems" } }] },
+    enabled: { checkbox: true },
     type: { select: { name: "number" } },
-    env: envDev,
     value_number: { number: 10 },
+    env: envDev,
     description: { rich_text: [{ text: { content: "Maximum items allowed in shopping cart" } }] }
   });
 
   await createRow({
     key: { title: [{ text: { content: "welcomeMessage" } }] },
+    enabled: { checkbox: true },
     type: { select: { name: "string" } },
+    value: { rich_text: [{ text: { content: "Welcome to our store!" } }] },
     env: envDev,
-    value_string: { rich_text: [{ text: { content: "Welcome to our store!" } }] },
     description: { rich_text: [{ text: { content: "Homepage hero message" } }] }
   });
 
   await createRow({
     key: { title: [{ text: { content: "paymentConfig" } }] },
+    enabled: { checkbox: true },
     type: { select: { name: "json" } },
+    value: { rich_text: [{ text: { content: JSON.stringify({ provider: "stripe", currency: "USD", methods: ["card", "paypal"] }) } }] },
     env: envDev,
-    value_json: { rich_text: [{ text: { content: JSON.stringify({ provider: "stripe", currency: "USD", methods: ["card", "paypal"] }) } }] },
     description: { rich_text: [{ text: { content: "Payment system configuration" } }] }
   });
 
   await createRow({
     key: { title: [{ text: { content: "premiumFeatureRollout" } }] },
-    type: { select: { name: "percentRollout" } },
-    env: envDev,
+    enabled: { checkbox: true },
+    type: { select: { name: "percent" } },
     value_percent: { number: 15 },
+    env: envDev,
     description: { rich_text: [{ text: { content: "Gradual rollout of premium features to 15% of users" } }] }
   });
 
   await createRow({
     key: { title: [{ text: { content: "regionBasedPricing" } }] },
-    type: { select: { name: "ruleSet" } },
-    env: envDev,
-    value_ruleset: { rich_text: [{ text: { content: JSON.stringify({ 
+    enabled: { checkbox: true },
+    type: { select: { name: "rules" } },
+    value: { rich_text: [{ text: { content: JSON.stringify({ 
       rules: [
         { if: { country: "US", plan: "enterprise" }, then: true },
         { if: { country: "EU" }, then: true },
         { else: false }
       ] 
     }) } }] },
+    env: envDev,
     description: { rich_text: [{ text: { content: "Enable region-specific pricing for US enterprise and EU users" } }] }
   });
 
-  process.stdout.write(`\n✅ Created database "${dbName}" with 6 sample flags\n`);
+  await createRow({
+    key: { title: [{ text: { content: "maintenanceMode" } }] },
+    enabled: { checkbox: false },
+    type: { select: { name: "json" } },
+    value: { rich_text: [{ text: { content: JSON.stringify({ message: "We'll be back soon!", estimatedTime: "30 minutes" }) } }] },
+    env: envDev,
+    description: { rich_text: [{ text: { content: "Emergency maintenance mode with custom message" } }] }
+  });
+
+  process.stdout.write(`\n✅ Created database "${dbName}" with 7 sample flags\n`);
   process.stdout.write(`📝 Database ID: ${db.id}\n`);
   process.stdout.write(`🔗 View: https://www.notion.so/${db.id.replace(/-/g, "")}\n`);
   
@@ -142,9 +156,16 @@ export async function cmdInit(): Promise<void> {
   process.stdout.write(`VERCEL_TEAM_ID=team_xxx  # Required if not using personal account\n`);
   process.stdout.write(`SYNC_SECRET=any_random_string\n`);
   
+  process.stdout.write(`\n💡 Feature Flag Structure:\n`);
+  process.stdout.write(`   • enabled (Checkbox) - Universal on/off toggle ✅\n`);
+  process.stdout.write(`   • value (Rich Text/Number/etc.) - Optional configuration\n`);
+  process.stdout.write(`   • type (Select) - Optional type hint for evaluation\n`);
+  process.stdout.write(`   • Every flag can be instantly disabled via 'enabled' checkbox!\n`);
+  
   process.stdout.write(`\n💡 Next steps:\n`);
   process.stdout.write(`   1. Share the database with your Notion integration\n`);
   process.stdout.write(`   2. Get Vercel credentials (see README)\n`);
   process.stdout.write(`   3. npx notion-edge-flags validate --env development\n`);
   process.stdout.write(`   4. npx notion-edge-flags sync --env development --once\n`);
+  process.stdout.write(`   5. Try: npx notion-edge-flags flip --env development --key newCheckoutFlow\n`);
 }

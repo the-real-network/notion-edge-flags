@@ -41,7 +41,11 @@ export function createSyncer(options: SyncerOptions) {
     for (const r of rows) {
       if (!r.envs.includes(env)) continue;
       const k = formatNamespacedKey(namespace, env, r.key);
-      out[k] = r.value;
+      out[k] = {
+        enabled: r.enabled,
+        value: r.value,
+        type: r.type
+      };
     }
     return out;
   }

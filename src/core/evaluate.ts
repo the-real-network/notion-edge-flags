@@ -18,6 +18,29 @@ export function defaultPredicates(): PredicateMap {
   };
 }
 
+export function evaluateFlag(input: {
+  key: string;
+  flag: { enabled: boolean; value?: unknown; type?: string } | null;
+  context?: Record<string, unknown>;
+  unitId?: string;
+  predicates?: PredicateMap;
+}): boolean {
+  if (!input.flag?.enabled) return false;
+  
+  const { type, value } = input.flag;
+  const context = input.context ?? {};
+  
+  if (type === "percent" && typeof value === "number" && input.unitId) {
+    return rolloutPercent({ key: input.key, percent: value, unitId: input.unitId });
+  }
+  
+  if (type === "rules" && value) {
+    return ruleSet({ key: input.key, value, context, predicates: input.predicates });
+  }
+  
+  return true;
+}
+
 export function ruleSet(input: {
   key: string;
   value: unknown;

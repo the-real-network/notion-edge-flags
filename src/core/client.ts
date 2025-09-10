@@ -1,5 +1,5 @@
 import { resolveEnvironment, formatNamespacedKey } from "../utils/env";
-import type { EdgeConfigConnection, FlagsClientOptions } from "./types";
+import type { EdgeConfigConnection, FlagsClientOptions, FeatureFlag } from "./types";
 import { createClient } from "@vercel/edge-config";
 
 function createFetchConnection(opts: { edgeConfigId?: string; edgeConfigToken?: string; teamId?: string }): EdgeConfigConnection {
@@ -88,30 +88,61 @@ export function createFlagsClient(options: FlagsClientOptions = {}) {
     }
   }
 
-  async function getBoolean(key: string): Promise<boolean | null> {
+  async function getFlag(key: string): Promise<FeatureFlag | null> {
     await ensureCache();
     const v = cache?.[key];
     if (v === null || v === undefined) return null;
+    
+    if (typeof v === "object" && v !== null && "enabled" in v) {
+      return v as FeatureFlag;
+    }
+    
+    return {
+      enabled: Boolean(v),
+      value: v,
+      type: typeof v === "string" ? "string" : typeof v === "number" ? "number" : undefined
+    };
+  }
+
+  async function isEnabled(key: string): Promise<boolean> {
+    const flag = await getFlag(key);
+    return flag?.enabled ?? false;
+  }
+
+  async function getValue<T = unknown>(key: string): Promise<T | null> {
+    const flag = await getFlag(key);
+    if (!flag?.enabled) return null;
+    return (flag?.value as T) ?? null;
+  }
+
+  async function getBoolean(key: string): Promise<boolean | null> {
+    const flag = await getFlag(key);
+    if (!flag) return null;
+    if (!flag.enabled) return false;
+    
+    const v = flag.value;
     if (typeof v === "boolean") return v;
     if (typeof v === "string") {
       if (v === "true") return true;
       if (v === "false") return false;
     }
-    return null;
+    return flag.enabled;
   }
 
   async function getString(key: string): Promise<string | null> {
-    await ensureCache();
-    const v = cache?.[key];
-    if (v === null || v === undefined) return null;
+    const flag = await getFlag(key);
+    if (!flag?.enabled) return null;
+    
+    const v = flag.value;
     if (typeof v === "string") return v;
     return null;
   }
 
   async function getNumber(key: string): Promise<number | null> {
-    await ensureCache();
-    const v = cache?.[key];
-    if (v === null || v === undefined) return null;
+    const flag = await getFlag(key);
+    if (!flag?.enabled) return null;
+    
+    const v = flag.value;
     if (typeof v === "number") return v;
     if (typeof v === "string") {
       const n = Number(v);
@@ -121,9 +152,10 @@ export function createFlagsClient(options: FlagsClientOptions = {}) {
   }
 
   async function getJSON<T = unknown>(key: string): Promise<T | null> {
-    await ensureCache();
-    const v = cache?.[key];
-    if (v === null || v === undefined) return null;
+    const flag = await getFlag(key);
+    if (!flag?.enabled) return null;
+    
+    const v = flag.value;
     if (typeof v === "object") return v as T;
     if (typeof v === "string") {
       try {
@@ -139,11 +171,21 @@ export function createFlagsClient(options: FlagsClientOptions = {}) {
     await ensureCache();
     const out: Record<string, unknown> = {};
     for (const k of keys) {
-      out[k] = cache?.[k] ?? null;
+      const flag = await getFlag(k);
+      out[k] = flag?.enabled ? flag.value : null;
     }
     return out;
   }
 
-  return { getBoolean, getString, getNumber, getJSON, getMany };
+  return { 
+    isEnabled, 
+    getValue, 
+    getFlag, 
+    getBoolean, 
+    getString, 
+    getNumber, 
+    getJSON, 
+    getMany 
+  };
 }
 
