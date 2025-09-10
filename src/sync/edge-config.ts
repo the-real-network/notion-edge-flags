@@ -39,8 +39,9 @@ export async function getItems(keys: string[], opts: { edgeConfigId?: string; to
   return out;
 }
 
-export async function patchItems(items: PatchItem[], opts: { edgeConfigId: string; token: string }) {
-  const url = `https://api.vercel.com/v1/edge-config/${opts.edgeConfigId}/items`;
+export async function patchItems(items: PatchItem[], opts: { edgeConfigId: string; token: string; teamId?: string }) {
+  const baseUrl = `https://api.vercel.com/v1/edge-config/${opts.edgeConfigId}/items`;
+  const url = opts.teamId ? `${baseUrl}?teamId=${encodeURIComponent(opts.teamId)}` : baseUrl;
   const payload = { items };
   const res = await fetch(url, {
     method: "PATCH",

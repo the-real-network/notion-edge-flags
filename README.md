@@ -57,19 +57,39 @@ Share the database with your integration.
 
 ### 3. Vercel Setup
 
-1. **Create Edge Config**: Vercel Dashboard → Project → Storage → Edge Config → Create
-2. **Copy Connection String**: From the Edge Config page, copy the full connection string
+**Step 1: Create Edge Config**
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your team (important: remember which team you're in)
+3. Go to any project → **Storage** → **Edge Config** → **Create Config**
+4. Name it (e.g., "feature-flags")
+5. **Copy the connection string** - it looks like:
+   ```
+   https://edge-config.vercel.com/ecfg_xxxxx?token=xxxxx
+   ```
+
+**Step 2: Create API Token**
+1. Go to **Account Settings** → **Tokens** → **Create Token**
+2. **Important**: Ensure the token has access to the **same team** where you created the Edge Config
+3. Give it a name like "Edge Config Writer"
+4. **Scope**: Select the team that owns your Edge Config
+5. Copy the token (starts with `vc_` or similar)
+
+**Common Issues:**
+- **403 Forbidden**: Token and Edge Config must be in the same team
+- **Invalid connection string**: Must include `?token=` parameter
+- **Team mismatch**: Check that both resources are in the same Vercel team
 
 ### 4. Environment Variables
 
 ```bash
-# Required for sync
-NOTION_TOKEN=ntn_xxx
-NOTION_FLAGS_DB_NAME="Feature Flags"  # or use NOTION_FLAGS_DB=db_id
-EDGE_CONFIG=https://edge-config.vercel.com/ecfg_xxx?token=xxx
+# Required
+NOTION_TOKEN=ntn_xxxxx                    # From notion.so/my-integrations
+NOTION_FLAGS_DB_NAME="Feature Flags"     # Database name to search for
+EDGE_CONFIG=https://edge-config.vercel.com/ecfg_xxxxx?token=xxxxx  # Connection string
+VERCEL_API_TOKEN=vc_xxxxx                # API token with Edge Config write access
 
-# Optional for API route protection
-SYNC_SECRET=your_secret
+# Optional
+SYNC_SECRET=your_random_secret           # For protecting sync API route
 ```
 
 ### 5. Test Locally
@@ -105,7 +125,8 @@ export async function GET(req: Request) {
     databaseName: process.env.NOTION_FLAGS_DB_NAME 
   };
   const edgeConfig = { 
-    connectionString: process.env.EDGE_CONFIG! 
+    connectionString: process.env.EDGE_CONFIG!,
+    apiToken: process.env.VERCEL_API_TOKEN!
   };
   const syncer = createSyncer({ notion, edgeConfig, mode: 'once' });
   await syncer.run((since) => fetchChangedRows(notion, since));
@@ -238,7 +259,8 @@ const syncer = createSyncer({
     databaseName?: string     // Search by name
   },
   edgeConfig: { 
-    connectionString: string  // EDGE_CONFIG env var
+    connectionString: string,  // EDGE_CONFIG env var
+    apiToken: string          // VERCEL_API_TOKEN for writes
   },
   env?: string,               // Auto-detected
   namespace?: string,         // Default: "flag"
@@ -359,19 +381,29 @@ Fast enough for real-time decisions, reliable enough for production
 
 ## Troubleshooting
 
+**403 Forbidden errors?**
+- **Most common**: Vercel API token and Edge Config are in different teams
+- **Solution**: Recreate the API token with access to the Edge Config's team
+- **Check**: `curl -H "Authorization: Bearer $VERCEL_API_TOKEN" "https://api.vercel.com/v2/teams"` to see accessible teams
+
 **Sync not working?**
 - Check `npx notion-edge-flags validate --env <env>`
-- Verify Notion integration has database access
-- Ensure Edge Config token has write permissions
+- Verify Notion integration has database access  
+- Ensure API token has write permissions to Edge Config
 - Run `npx notion-edge-flags diff --env <env>` to see drift
 
 **Runtime reads returning null?**
-- Verify environment variables are loaded
+- Verify `EDGE_CONFIG` connection string is set
 - Check `npx notion-edge-flags export --env <env>`
-- Ensure `VERCEL_TEAM_ID` is set if Edge Config is in a team
 - Confirm flag exists for the resolved environment
+- Try `client.getAll()` to see all available keys
 
 **Schema errors?**
 - Errors include Notion page URLs and fix instructions
-- Either use `type` Select OR typed `value_*` columns
+- Either use `type` Select OR typed `value_*` columns  
 - Ensure `env` multi-select includes target environment
+
+**Team/scope issues?**
+- Edge Config and API token must be in the same Vercel team
+- Connection string format: `https://edge-config.vercel.com/ecfg_xxx?token=xxx`
+- Check team access: API token scope must match Edge Config team

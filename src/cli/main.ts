@@ -45,10 +45,12 @@ async function cmdSync(argv: string[]) {
   const envArgIndex = argv.indexOf("--env");
   const env = (envArgIndex >= 0 ? argv[envArgIndex + 1] : undefined) ?? resolveEnvironment(null);
   const edgeConfigConnection = getEnv("EDGE_CONFIG");
+  const apiToken = getEnv("VERCEL_API_TOKEN");
+  const teamId = process.env.VERCEL_TEAM_ID ?? "team_Ee5gNAroVwoAwWbx1hJRNkYJ";
   const notion = { token: getEnv("NOTION_TOKEN"), databaseId: process.env.NOTION_FLAGS_DB ?? undefined, databaseName: process.env.NOTION_FLAGS_DB_NAME ?? undefined };
   const syncer = createSyncer({
     notion,
-    edgeConfig: { connectionString: edgeConfigConnection },
+    edgeConfig: { connectionString: edgeConfigConnection, apiToken, teamId },
     env,
     mode: once ? "once" : "poll"
   });
@@ -78,9 +80,10 @@ async function cmdFlip(argv: string[]) {
     } catch {}
   }
   const edgeConfigConnection = getEnv("EDGE_CONFIG");
-  const { edgeConfigId, token } = parseEdgeConfigConnection(edgeConfigConnection);
+  const apiToken = getEnv("VERCEL_API_TOKEN");
+  const { edgeConfigId } = parseEdgeConfigConnection(edgeConfigConnection);
   const nsKey = formatNamespacedKey("flag", env, key);
-  await patchItems([{ operation: "upsert", key: nsKey, value }], { edgeConfigId, token });
+  await patchItems([{ operation: "upsert", key: nsKey, value }], { edgeConfigId, token: apiToken });
   process.stdout.write(`updated ${nsKey}\n`);
 }
 

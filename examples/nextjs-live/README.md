@@ -4,30 +4,51 @@ Complete demonstration of notion-edge-flags with real Notion and Vercel Edge Con
 
 ## Setup
 
-### 1. Environment
+### 1. Get Credentials
+
+**Notion Integration:**
+1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
+2. Click "New integration" → name it "Feature Flags"
+3. Copy the **Internal Integration Token** → `NOTION_TOKEN`
+
+**Parent Page ID:**
+1. Open any Notion page in your workspace
+2. Copy the URL: `https://www.notion.so/workspace/Page-Name-abc123def456...`
+3. The 32-character hex at the end is your `NOTION_PARENT_PAGE_ID`
+
+**Vercel Edge Config:**
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. **Important**: Select the correct team (note the team name)
+3. Go to any project → **Storage** → **Edge Config** → **Create Config**
+4. Name it "feature-flags"
+5. Copy the **Connection String** → `EDGE_CONFIG`
+
+**Vercel API Token:**
+1. Go to **Account Settings** → **Tokens** → **Create Token**
+2. **Critical**: Scope it to the **same team** where you created Edge Config
+3. Name it "Edge Config Writer"
+4. Copy the token → `VERCEL_API_TOKEN`
+
+### 2. Environment Setup
 ```bash
 cp .env.example .env.local
-# Fill required values:
-# - NOTION_TOKEN (from notion.so/my-integrations)
-# - NOTION_PARENT_PAGE_ID (32-char hex from any Notion page URL)
-# - EDGE_CONFIG (connection string from Vercel Dashboard → Storage → Edge Config)
-# - SYNC_SECRET (any random string for API protection)
+# Fill all values from above steps
 ```
 
-### 2. Create Test Database
+### 3. Create Test Database
 ```bash
-# Get parent page ID from any Notion page URL (32-char hex)
-NOTION_PARENT_PAGE_ID=your_page_id bun run scripts/seed-notion.ts
+bun run scripts/seed-notion.ts
+# This creates a database with sample flags under your parent page
 ```
 
-### 3. Install and Sync
+### 4. Install and Sync
 ```bash
 bun install
 npx notion-edge-flags validate --env development
 npx notion-edge-flags sync --env development --once
 ```
 
-### 4. Start App
+### 5. Start App
 ```bash
 bun run dev
 # Visit http://localhost:3030

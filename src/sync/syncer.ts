@@ -8,7 +8,7 @@ export type DriftPolicy = "prefer-notion" | "prefer-edge-config" | "report-only"
 
 export type SyncerOptions = {
   notion: NotionClientOptions;
-  edgeConfig: { connectionString: string };
+  edgeConfig: { connectionString: string; apiToken: string; teamId?: string };
   env?: string;
   namespace?: string;
   pollIntervalMs?: number;
@@ -25,8 +25,8 @@ export function createSyncer(options: SyncerOptions) {
   const drift: DriftPolicy = options.driftPolicy ?? "prefer-notion";
   const log = options.logger ?? ((e) => console.log(e));
   
-  const { edgeConfigId, token } = parseEdgeConfigConnection(options.edgeConfig.connectionString);
-  const edgeConfigOpts = { edgeConfigId, token };
+  const { edgeConfigId } = parseEdgeConfigConnection(options.edgeConfig.connectionString);
+  const edgeConfigOpts = { edgeConfigId, token: options.edgeConfig.apiToken, teamId: options.edgeConfig.teamId };
 
   async function computeChecksum(values: Record<string, unknown>): Promise<string> {
     const keys = Object.keys(values).sort();
@@ -67,7 +67,7 @@ export function createSyncer(options: SyncerOptions) {
 
   async function once(fetcher: (since: string | null) => Promise<NotionFlagRow[]>) {
     const t0 = Date.now();
-    const since = await readCheckpoint(namespace, env, edgeConfigOpts);
+    const since = await readCheckpoint(namespace, env, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
     const rows = await fetcher(since);
     const mapped = mapNotionToEdge(rows);
     const updated = await diffAndPatch(mapped);
