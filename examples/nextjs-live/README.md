@@ -7,7 +7,11 @@ Complete demonstration of notion-edge-flags with real Notion and Vercel Edge Con
 ### 1. Environment
 ```bash
 cp .env.example .env.local
-# Fill all values (see main README for how to get them)
+# Fill required values:
+# - NOTION_TOKEN (from notion.so/my-integrations)
+# - NOTION_PARENT_PAGE_ID (32-char hex from any Notion page URL)
+# - EDGE_CONFIG (connection string from Vercel Dashboard → Storage → Edge Config)
+# - SYNC_SECRET (any random string for API protection)
 ```
 
 ### 2. Create Test Database
