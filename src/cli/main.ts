@@ -3,6 +3,7 @@ import { createSyncer } from "../sync/syncer.js";
 import { formatNamespacedKey, resolveEnvironment } from "../utils/env.js";
 import { patchItems, getItems } from "../sync/edge-config.js";
 import { fetchChangedRows } from "../sync/notion.js";
+import { parseEdgeConfigConnection } from "../utils/edge-config-parser.js";
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -43,13 +44,11 @@ async function cmdSync(argv: string[]) {
   const once = argv.includes("--once");
   const envArgIndex = argv.indexOf("--env");
   const env = (envArgIndex >= 0 ? argv[envArgIndex + 1] : undefined) ?? resolveEnvironment(null);
-  const edgeConfigId = getEnv("EDGE_CONFIG_ID");
-  const token = getEnv("VERCEL_API_TOKEN");
-  const teamId = process.env.VERCEL_TEAM_ID;
+  const edgeConfigConnection = getEnv("EDGE_CONFIG");
   const notion = { token: getEnv("NOTION_TOKEN"), databaseId: process.env.NOTION_FLAGS_DB ?? undefined, databaseName: process.env.NOTION_FLAGS_DB_NAME ?? undefined };
   const syncer = createSyncer({
     notion,
-    vercel: { apiToken: token, edgeConfigId },
+    edgeConfig: { connectionString: edgeConfigConnection },
     env,
     mode: once ? "once" : "poll"
   });
@@ -78,10 +77,10 @@ async function cmdFlip(argv: string[]) {
       value = JSON.parse(raw);
     } catch {}
   }
-  const edgeConfigId = getEnv("EDGE_CONFIG_ID");
-  const token = getEnv("VERCEL_API_TOKEN");
+  const edgeConfigConnection = getEnv("EDGE_CONFIG");
+  const { edgeConfigId, token } = parseEdgeConfigConnection(edgeConfigConnection);
   const nsKey = formatNamespacedKey("flag", env, key);
-  await patchItems([{ operation: "upsert", key: nsKey, value }], { edgeConfigId, token, teamId: process.env.VERCEL_TEAM_ID });
+  await patchItems([{ operation: "upsert", key: nsKey, value }], { edgeConfigId, token });
   process.stdout.write(`updated ${nsKey}\n`);
 }
 
@@ -103,8 +102,7 @@ async function main() {
     loadDotenv();
     const envArgIndex = rest.indexOf("--env");
     const env = envArgIndex >= 0 && rest[envArgIndex + 1] ? (rest[envArgIndex + 1] as string) : resolveEnvironment(null);
-    const edgeConfigId = getEnv("EDGE_CONFIG_ID");
-    const token = getEnv("VERCEL_API_TOKEN");
+    const edgeConfigConnection = getEnv("EDGE_CONFIG");
     const notion = { token: getEnv("NOTION_TOKEN"), databaseId: process.env.NOTION_FLAGS_DB ?? undefined, databaseName: process.env.NOTION_FLAGS_DB_NAME ?? undefined };
     const rows = await fetchChangedRows(notion, null);
     const keys = rows.filter((r) => r.envs.includes(env)).map((r) => `flag__${env}__${r.key}`);
@@ -112,7 +110,7 @@ async function main() {
       process.stdout.write("[]\n");
       return;
     }
-    const map = await getItems(keys, { edgeConfigId, token, teamId: process.env.VERCEL_TEAM_ID });
+    const map = await getItems(keys, { connectionString: edgeConfigConnection });
     const out = keys.map((k) => ({ key: k, value: map[k] ?? null }));
     process.stdout.write(JSON.stringify(out, null, 2) + "\n");
     return;
@@ -121,8 +119,7 @@ async function main() {
     loadDotenv();
     const envArgIndex = rest.indexOf("--env");
     const env = envArgIndex >= 0 && rest[envArgIndex + 1] ? (rest[envArgIndex + 1] as string) : resolveEnvironment(null);
-    const edgeConfigId = getEnv("EDGE_CONFIG_ID");
-    const token = getEnv("VERCEL_API_TOKEN");
+    const edgeConfigConnection = getEnv("EDGE_CONFIG");
     const notion = { token: getEnv("NOTION_TOKEN"), databaseId: process.env.NOTION_FLAGS_DB ?? undefined, databaseName: process.env.NOTION_FLAGS_DB_NAME ?? undefined };
     const rows = await fetchChangedRows(notion, null);
     const desired: Record<string, unknown> = {};
@@ -132,7 +129,7 @@ async function main() {
       desired[k] = r.value;
       keys.push(k);
     }
-    const current = await getItems(keys, { edgeConfigId, token, teamId: process.env.VERCEL_TEAM_ID });
+    const current = await getItems(keys, { connectionString: edgeConfigConnection });
     const diffs: Array<{ key: string; notion?: unknown; edge?: unknown }> = [];
     const allKeys = new Set([...Object.keys(desired), ...Object.keys(current)]);
     for (const k of allKeys) {

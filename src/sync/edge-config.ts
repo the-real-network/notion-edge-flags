@@ -1,12 +1,23 @@
+import { createClient } from "@vercel/edge-config";
+
 type PatchItem = { operation: "upsert"; key: string; value: unknown };
 
-export async function getItems(keys: string[], opts: { edgeConfigId?: string; token?: string; teamId?: string }) {
+export async function getItems(keys: string[], opts: { edgeConfigId?: string; token?: string; connectionString?: string }) {
+  if (opts.connectionString) {
+    const client = createClient(opts.connectionString);
+    const all = await client.getAll();
+    const out: Record<string, unknown> = {};
+    for (const k of keys) {
+      out[k] = all[k] ?? null;
+    }
+    return out;
+  }
+  
   const base = opts.edgeConfigId
     ? `https://api.vercel.com/v1/edge-config/${opts.edgeConfigId}`
     : `https://api.vercel.com/v1/edge-config`;
   const search = new URLSearchParams();
   search.set("keys", JSON.stringify(keys));
-  if (opts.teamId) search.set("teamId", opts.teamId);
   const url = `${base}/items?${search.toString()}`;
   const res = await fetch(url, {
     headers: opts.token ? { Authorization: `Bearer ${opts.token}` } : undefined,
@@ -28,9 +39,8 @@ export async function getItems(keys: string[], opts: { edgeConfigId?: string; to
   return out;
 }
 
-export async function patchItems(items: PatchItem[], opts: { edgeConfigId: string; token: string; teamId?: string }) {
-  const base = `https://api.vercel.com/v1/edge-config/${opts.edgeConfigId}/items`;
-  const url = opts.teamId ? `${base}?teamId=${encodeURIComponent(opts.teamId)}` : base;
+export async function patchItems(items: PatchItem[], opts: { edgeConfigId: string; token: string }) {
+  const url = `https://api.vercel.com/v1/edge-config/${opts.edgeConfigId}/items`;
   const payload = { items };
   const res = await fetch(url, {
     method: "PATCH",

@@ -1,12 +1,9 @@
 export type EnvironmentName = "production" | "preview" | "development" | "test" | string;
 
 export type FlagsClientOptions = {
-  edgeConfigToken?: string;
-  edgeConfigId?: string;
   connection?: EdgeConfigConnection | null;
   env?: EnvironmentName;
   namespace?: string;
-  teamId?: string;
 };
 
 export type EdgeConfigConnection = {

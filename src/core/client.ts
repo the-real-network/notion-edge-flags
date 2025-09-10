@@ -48,7 +48,6 @@ function createFetchConnection(opts: { edgeConfigId?: string; edgeConfigToken?: 
 export function createFlagsClient(options: FlagsClientOptions = {}) {
   const namespace = options.namespace ?? "flag";
   const env = resolveEnvironment(options.env ?? null);
-  const edgeConfigId = options.edgeConfigId ?? process.env.EDGE_CONFIG_ID;
   const edgeConfigConnection = process.env.EDGE_CONFIG;
   
   const edgeConfig = options.connection ? null : (edgeConfigConnection ? createClient(edgeConfigConnection) : null);
@@ -85,33 +84,9 @@ export function createFlagsClient(options: FlagsClientOptions = {}) {
         return;
       }
       
-      console.log(`falling back to REST API`);
-      const connection = createFetchConnection({
-        edgeConfigId,
-        edgeConfigToken: options.edgeConfigToken ?? process.env.VERCEL_API_TOKEN,
-        teamId: options.teamId ?? process.env.VERCEL_TEAM_ID
-      });
-      
-      const prefix = `${namespace}__${env}__`;
-      const keys = Object.keys(cache ?? {}).map(k => `${prefix}${k}`);
-      if (keys.length === 0) {
-        cache = {};
-        lastFetch = now;
-        return;
-      }
-      
-      const values = await connection.getMany(keys);
-      const newCache: Record<string, unknown> = {};
-      for (const [fullKey, value] of Object.entries(values)) {
-        if (fullKey.startsWith(prefix)) {
-          const shortKey = fullKey.slice(prefix.length);
-          newCache[shortKey] = value;
-        }
-      }
-      
-      cache = newCache;
-      lastFetch = now;
-      console.log(`REST cache updated: ${Object.keys(cache).length} flags`);
+      console.log(`no Edge Config connection available`);
+      if (!cache) cache = {};
+      return;
       
     } catch (error) {
       console.log(`fetch error:`, error);

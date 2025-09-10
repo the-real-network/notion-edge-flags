@@ -3,7 +3,7 @@ import { getItems, patchItems } from "./edge-config.js";
 
 export type SyncSummary = { updated: number; at: string; checksum: string };
 
-export async function readCheckpoint(namespace: string, env: string, opts: { edgeConfigId: string; token: string; teamId?: string }) {
+export async function readCheckpoint(namespace: string, env: string, opts: { edgeConfigId: string; token: string }) {
   const key = `${namespace}__sync__${env}__checkpoint`;
   const map = await getItems([key], opts);
   const v = map[key];

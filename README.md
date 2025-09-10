@@ -58,21 +58,15 @@ Share the database with your integration.
 ### 3. Vercel Setup
 
 1. **Create Edge Config**: Vercel Dashboard → Project → Storage → Edge Config → Create
-2. **API Token**: Account Settings → Tokens → Create (scope to your project/team)
-3. **Get IDs**: 
-   - Edge Config ID: from the config page URL or settings
-   - Team ID: from browser URL when in team context (team_xxx)
+2. **Copy Connection String**: From the Edge Config page, copy the full connection string
 
 ### 4. Environment Variables
 
 ```bash
 # Required for sync
 NOTION_TOKEN=ntn_xxx
-NOTION_FLAGS_DB=db_id_or_use_name_below
-NOTION_FLAGS_DB_NAME="Feature Flags"
-VERCEL_API_TOKEN=vc_xxx
-EDGE_CONFIG_ID=ecfg_xxx
-VERCEL_TEAM_ID=team_xxx  # if Edge Config is in a team
+NOTION_FLAGS_DB_NAME="Feature Flags"  # or use NOTION_FLAGS_DB=db_id
+EDGE_CONFIG=https://edge-config.vercel.com/ecfg_xxx?token=xxx
 
 # Optional for API route protection
 SYNC_SECRET=your_secret
@@ -110,11 +104,10 @@ export async function GET(req: Request) {
     token: process.env.NOTION_TOKEN!, 
     databaseName: process.env.NOTION_FLAGS_DB_NAME 
   };
-  const vercel = { 
-    apiToken: process.env.VERCEL_API_TOKEN!, 
-    edgeConfigId: process.env.EDGE_CONFIG_ID! 
+  const edgeConfig = { 
+    connectionString: process.env.EDGE_CONFIG! 
   };
-  const syncer = createSyncer({ notion, vercel, mode: 'once' });
+  const syncer = createSyncer({ notion, edgeConfig, mode: 'once' });
   await syncer.run((since) => fetchChangedRows(notion, since));
   return NextResponse.json({ ok: true });
 }
@@ -224,10 +217,7 @@ npx notion-edge-flags export --env production
 const client = createFlagsClient({
   env?: string,                // Auto-detected from VERCEL_ENV → NODE_ENV
   namespace?: string,          // Default: "flag"
-  edgeConfigId?: string,       // Default: process.env.EDGE_CONFIG_ID
-  edgeConfigToken?: string,    // Default: process.env.VERCEL_API_TOKEN
-  teamId?: string,             // Default: process.env.VERCEL_TEAM_ID
-  connection?: EdgeConfigConnection  // Custom adapter
+  connection?: EdgeConfigConnection  // Custom adapter (uses EDGE_CONFIG by default)
 });
 ```
 
@@ -247,9 +237,8 @@ const syncer = createSyncer({
     databaseId?: string,      // Use this OR databaseName
     databaseName?: string     // Search by name
   },
-  vercel: { 
-    apiToken: string, 
-    edgeConfigId: string 
+  edgeConfig: { 
+    connectionString: string  // EDGE_CONFIG env var
   },
   env?: string,               // Auto-detected
   namespace?: string,         // Default: "flag"

@@ -1,13 +1,14 @@
 import { resolveEnvironment, formatNamespacedKey } from "../utils/env.js";
 import { getItems, patchItems } from "./edge-config.js";
 import { readCheckpoint, writeCheckpoint, writeSummary } from "./checkpoint.js";
+import { parseEdgeConfigConnection } from "../utils/edge-config-parser.js";
 import type { NotionClientOptions, NotionFlagRow } from "./notion.js";
 
 export type DriftPolicy = "prefer-notion" | "prefer-edge-config" | "report-only";
 
 export type SyncerOptions = {
   notion: NotionClientOptions;
-  vercel: { apiToken: string; edgeConfigId: string };
+  edgeConfig: { connectionString: string };
   env?: string;
   namespace?: string;
   pollIntervalMs?: number;
@@ -23,6 +24,9 @@ export function createSyncer(options: SyncerOptions) {
   const mode = options.mode ?? "once";
   const drift: DriftPolicy = options.driftPolicy ?? "prefer-notion";
   const log = options.logger ?? ((e) => console.log(e));
+  
+  const { edgeConfigId, token } = parseEdgeConfigConnection(options.edgeConfig.connectionString);
+  const edgeConfigOpts = { edgeConfigId, token };
 
   async function computeChecksum(values: Record<string, unknown>): Promise<string> {
     const keys = Object.keys(values).sort();
@@ -45,7 +49,7 @@ export function createSyncer(options: SyncerOptions) {
   async function diffAndPatch(target: Record<string, unknown>) {
     const keys = Object.keys(target);
     if (keys.length === 0) return 0;
-    const current = await getItems(keys, { edgeConfigId: options.vercel.edgeConfigId, token: options.vercel.apiToken, teamId: process.env.VERCEL_TEAM_ID });
+    const current = await getItems(keys, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
     const items: Array<{ operation: "upsert"; key: string; value: unknown }> = [];
     for (const k of keys) {
       const desired = target[k];
@@ -57,22 +61,22 @@ export function createSyncer(options: SyncerOptions) {
         items.push({ operation: "upsert", key: k, value: desired });
       }
     }
-    if (items.length > 0) await patchItems(items, { edgeConfigId: options.vercel.edgeConfigId, token: options.vercel.apiToken, teamId: process.env.VERCEL_TEAM_ID });
+    if (items.length > 0) await patchItems(items, edgeConfigOpts);
     return items.length;
   }
 
   async function once(fetcher: (since: string | null) => Promise<NotionFlagRow[]>) {
     const t0 = Date.now();
-    const since = await readCheckpoint(namespace, env, { edgeConfigId: options.vercel.edgeConfigId, token: options.vercel.apiToken, teamId: process.env.VERCEL_TEAM_ID });
+    const since = await readCheckpoint(namespace, env, edgeConfigOpts);
     const rows = await fetcher(since);
     const mapped = mapNotionToEdge(rows);
     const updated = await diffAndPatch(mapped);
     const keys = Object.keys(mapped);
-    const after = await getItems(keys, { edgeConfigId: options.vercel.edgeConfigId, token: options.vercel.apiToken, teamId: process.env.VERCEL_TEAM_ID });
+    const after = await getItems(keys, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
     const checksum = await computeChecksum(after);
     const now = new Date().toISOString();
-    await writeCheckpoint(namespace, env, now, { edgeConfigId: options.vercel.edgeConfigId, token: options.vercel.apiToken });
-    await writeSummary(namespace, env, { updated, at: now, checksum }, { edgeConfigId: options.vercel.edgeConfigId, token: options.vercel.apiToken });
+    await writeCheckpoint(namespace, env, now, edgeConfigOpts);
+    await writeSummary(namespace, env, { updated, at: now, checksum }, edgeConfigOpts);
     log(`synced ${updated} flags for ${env}`);
   }
 
