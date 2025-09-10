@@ -75,12 +75,25 @@ export function createSyncer(options: SyncerOptions) {
     const rows = await fetcher(since);
     const mapped = mapNotionToEdge(rows);
     const updated = await diffAndPatch(mapped);
-    const keys = Object.keys(mapped);
-    const after = await getItems(keys, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
-    const checksum = await computeChecksum(after);
-    const now = new Date().toISOString();
-    await writeCheckpoint(namespace, env, now, edgeConfigOpts);
-    await writeSummary(namespace, env, { updated, at: now, checksum }, edgeConfigOpts);
+    
+    if (rows.length > 0) {
+      const latestEditTime = Math.max(...rows.map(r => new Date(r.lastEditedAt).getTime()));
+      const now = new Date(latestEditTime).toISOString();
+      
+      if (updated > 0) {
+        const keys = Object.keys(mapped);
+        const after = await getItems(keys, { ...edgeConfigOpts, connectionString: options.edgeConfig.connectionString });
+        const checksum = await computeChecksum(after);
+        const checkpointKey = `${namespace}__sync__${env}__checkpoint`;
+        const summaryKey = `${namespace}__sync__${env}__summary`;
+        await patchItems([
+          { operation: "upsert", key: checkpointKey, value: now },
+          { operation: "upsert", key: summaryKey, value: { updated, at: now, checksum } }
+        ], edgeConfigOpts);
+      } else {
+        await writeCheckpoint(namespace, env, now, edgeConfigOpts);
+      }
+    }
   }
 
   async function run(fetcher: (since: string | null) => Promise<NotionFlagRow[]>) {
