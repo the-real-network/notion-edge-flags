@@ -15,11 +15,13 @@ export async function cmdInit(): Promise<void> {
   
   process.stdout.write("\nStep 2: Parent Page\n");
   process.stdout.write("1. Open any Notion page in your workspace\n");
-  process.stdout.write("2. Copy the URL (contains 32-char hex at the end)\n");
-  process.stdout.write("3. Example: https://notion.so/workspace/Page-abc123def456...\n\n");
+  process.stdout.write("2. Copy the URL (contains page ID at the end)\n");
+  process.stdout.write("3. Example: https://notion.so/workspace/Page-abc123de-f456-7890-abcd-ef1234567890\n\n");
   
-  const parentPageId = await promptInput("Paste the 32-char page ID:");
-  if (!parentPageId || parentPageId.length !== 32) throw new Error("Invalid page ID (must be 32 characters)");
+  const rawPageId = await promptInput("Paste the page ID (32 or 36 chars):");
+  if (!rawPageId) throw new Error("Page ID required");
+  const parentPageId = rawPageId.replace(/-/g, "");
+  if (parentPageId.length !== 32) throw new Error("Invalid page ID (must be 32 hex characters, with or without dashes)");
   
   const dbName = process.env.NOTION_FLAGS_DB_NAME || await promptInput("Database name (default: Feature Flags):") || "Feature Flags";
 
