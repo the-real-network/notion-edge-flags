@@ -59,37 +59,30 @@ export function createFlagsClient(options: FlagsClientOptions = {}) {
   async function ensureCache() {
     const now = Date.now();
     const cacheAge = cache ? now - lastFetch : -1;
-    console.log(`cache check: age=${cacheAge}ms expiry=${cacheExpiry}ms hasCache=${!!cache} willFetch=${!cache || cacheAge >= cacheExpiry}`);
     if (cache && cacheAge < cacheExpiry) return;
     
     try {
       if (edgeConfig) {
-        console.log(`fetching via SDK: env=${env}`);
         const prefix = `${namespace}__${env}__`;
         const allItems = await edgeConfig.getAll();
-        console.log(`SDK success: total=${Object.keys(allItems ?? {}).length} items`);
         
         const newCache: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(allItems ?? {})) {
           if (key.startsWith(prefix)) {
             const shortKey = key.slice(prefix.length);
             newCache[shortKey] = value;
-            console.log(`cached via SDK: ${shortKey} = ${JSON.stringify(value)}`);
           }
         }
         
         cache = newCache;
         lastFetch = now;
-        console.log(`SDK cache updated: ${Object.keys(cache).length} flags`);
         return;
       }
       
-      console.log(`no Edge Config connection available`);
       if (!cache) cache = {};
       return;
       
     } catch (error) {
-      console.log(`fetch error:`, error);
       if (!cache) cache = {};
       if (cache) lastFetch = now;
     }

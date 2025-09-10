@@ -36,8 +36,8 @@ describe("syncer", () => {
       }
     ]);
     const notion = { token: "t", databaseId: "db" } as any;
-    const vercel = { apiToken: "t", edgeConfigId: "local" } as any;
-    const syncer = createSyncer({ notion, vercel, env: "production", mode: "once" });
+    const edgeConfig = { connectionString: "https://edge-config.vercel.com/local?token=test", apiToken: "t" } as any;
+    const syncer = createSyncer({ notion, edgeConfig, env: "production", mode: "once" });
     await syncer.run((since) => fetchChangedRows(notion, since));
     expect(store.get("flag__production__t1")).toBe(true);
   });

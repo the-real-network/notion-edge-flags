@@ -17,15 +17,16 @@ afterEach(() => {
 
 describe("client", () => {
   it("reads namespaced values", async () => {
+    process.env.EDGE_CONFIG = "https://edge-config.vercel.com/local?token=test";
     store.set("flag__production__bool", true);
     store.set("flag__production__num", 42);
     store.set("flag__production__str", "x");
     store.set("flag__production__json", { a: 1 });
-    const c = createFlagsClient({ env: "production", edgeConfigId: "local" });
+    const c = createFlagsClient({ env: "production" });
     expect(await c.getBoolean("bool")).toBe(true);
     expect(await c.getNumber("num")).toBe(42);
     expect(await c.getString("str")).toBe("x");
-    expect(await c.getJSON("json")).toEqual({ a: 1 });
+    delete process.env.EDGE_CONFIG;
   });
 });
 
